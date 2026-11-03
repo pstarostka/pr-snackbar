@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, ProcessRunInit, ProcessRunResult, Register } from 'claude-code'
 
 import type { PrSnackbarPr } from '../types'
-import { detectHost, parseAzure, parseGitlab, parseHostList, shortTitle } from './hosts'
+import { detectHost, parseAzure, parseGitlab, parseHostList, parseShortstat, shortTitle } from './hosts'
 
 const prAtom = atom({ plugin: 'pr-snackbar', key: 'pr' } as const, null)
 const expandedAtom = atom({ plugin: 'pr-snackbar', key: 'expanded' } as const, false)
@@ -152,7 +152,10 @@ async function refresh($: EngineInterface) {
   isBusy = true
   try {
     const pr = await fetchPr($)
-    await update($, prAtom, () => pr)
+    // Neither host returns line counts, so they come from the local branch. A merged branch counts nothing and shows none.
+    const stat = pr && await run($, ['git', 'diff', '--shortstat', `origin/${pr.target}...HEAD`]).catch(() => null)
+    const diff = stat?.exitCode === 0 ? parseShortstat(stat.stdout) : null
+    await update($, prAtom, () => pr && { ...pr, diff })
   } finally {
     isBusy = false
   }
@@ -278,7 +281,13 @@ export const register: Register = (on, options) => {
             )}
           <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={10}>
             <Text size="footnote" weight="semibold" wrap="truncate-end">{pr.ref} · {shortTitle(pr.title, 40)}</Text>
-            <Text mono size="caption" dimColor wrap="truncate-end">{branches} · {HOST_NAME[pr.host]}</Text>
+            <Text mono size="caption" dimColor wrap="truncate-end">
+              {branches} · {HOST_NAME[pr.host]}
+              {pr.diff && ' · '}
+              {pr.diff && <Text color={TONE.success}>+{pr.diff.added}</Text>}
+              {pr.diff && ' '}
+              {pr.diff && <Text color={TONE.error}>−{pr.diff.removed}</Text>}
+            </Text>
           </Box>
           <Box flexDirection="row" columnGap="xs" alignItems="center" flexShrink={0}>
             {pr.chips.map(chip => {

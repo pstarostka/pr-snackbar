@@ -45,6 +45,8 @@ function engine($: Parameters<Parameters<typeof test>[1]>[0], on: Parameters<Par
       ? 'https://acme@dev.azure.com/acme/payments/_git/webhooks\n'
       : cmd.startsWith('git rev-parse')
         ? 'feature/webhook-retry-queue\n'
+        : cmd === 'git diff --shortstat origin/main...HEAD'
+          ? ' 5 files changed, 122 insertions(+), 23 deletions(-)\n'
         : cmd.includes('pr list')
           ? JSON.stringify(PR_LIST)
           : cmd.includes('policy list')
@@ -79,7 +81,7 @@ test('the band draws on every surface; the title is cut; branches are shown', as
     const ui = await $.ui.mount({ ...BAND, surface })
     const title = (await ui.find({ type: 'Text', text: /^PR 4821 · / }))?.text ?? ''
     expect(title.endsWith('...')).toBe(true)
-    expect((await ui.find({ type: 'Text', text: /→ main/ }))?.text).toBe('feature/webhook-retry... → main · Azure DevOps')
+    expect((await ui.find({ type: 'Text', text: /→ main/ }))?.text).toBe('feature/webhook-retry... → main · Azure DevOps · +122 −23')
     await ui.unmount()
   }
 })

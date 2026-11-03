@@ -22,7 +22,11 @@ export type PrSnackbarPr = {
   reviewersTitle: string
   reviewers: PrSnackbarReviewer[]
   conflicts: boolean
+  // lines added and removed on this branch against origin/<target>; absent when it has none
+  diff?: PrSnackbarDiff | null
 }
+
+export type PrSnackbarDiff = { added: number; removed: number }
 
 declare module 'claude-code' {
   interface PluginState {
