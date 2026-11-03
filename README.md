@@ -122,7 +122,7 @@ Then open a session in a repository whose current branch has an open MR/PR. The 
 
 | | GitLab | Azure DevOps |
 | --- | --- | --- |
-| Checks | `Pipeline running` · `Pipeline passed` · `Pipeline failed · <job>` · `Pipeline canceled` | `Policies running · 2/4` · `Policies passed` · `Policies failed · <policy>` |
+| Checks | `Pipeline running` · `Pipeline passed` · `Pipeline failed · <job>` · `Pipeline waiting · <manual job>` · `Pipeline canceled` · `Pipeline skipped` | `Policies running · 2/4` · `Policies passed` · `Policies failed · <policy>` |
 | Sign-off | `1 of 2 approvals` · `Approved` | `1 of 2 required reviewers` · `Approved` · `Waiting for author` · `Rejected` |
 | Blockers | `Conflicts with <target>` · `Draft` | `Conflicts with <target>` · `Draft` |
 

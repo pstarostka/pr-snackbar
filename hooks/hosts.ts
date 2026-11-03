@@ -59,7 +59,7 @@ type GitlabApprovals = {
 type GitlabJob = { name: string; status: string; duration?: number | null }
 
 const GITLAB_JOB_STATE: Record<string, PrSnackbarCheck['state']> = {
-  success: 'passed', failed: 'failed', running: 'running', canceled: 'skipped', skipped: 'skipped', manual: 'skipped',
+  success: 'passed', failed: 'failed', running: 'running', canceled: 'skipped', skipped: 'skipped', manual: 'manual',
 }
 
 const RUNNING = ['created', 'waiting_for_resource', 'preparing', 'pending', 'running', 'scheduled']
@@ -76,9 +76,14 @@ export function parseGitlab(
   const failed = pipeline === 'failed'
   if (mr.draft) chips.push({ label: 'Draft', tone: 'subtle' })
   if (pipeline && RUNNING.includes(pipeline)) chips.push({ label: 'Pipeline running', tone: 'warning' })
-  if (failed) chips.push({ label: failedJob ? `Pipeline failed · ${failedJob}` : 'Pipeline failed', tone: 'error' })
-  if (pipeline === 'success') chips.push({ label: 'Pipeline passed', tone: 'success' })
-  if (pipeline === 'canceled') chips.push({ label: 'Pipeline canceled', tone: 'subtle' })
+  else if (failed) chips.push({ label: failedJob ? `Pipeline failed · ${failedJob}` : 'Pipeline failed', tone: 'error' })
+  else if (pipeline === 'manual') {
+    // The pipeline stopped at a manual job someone has to start.
+    const job = jobs.find(j => j.status === 'manual')?.name
+    chips.push({ label: job ? `Pipeline waiting · ${job}` : 'Pipeline waiting', tone: 'warning' })
+  } else if (pipeline === 'success') chips.push({ label: 'Pipeline passed', tone: 'success' })
+  // canceled, skipped, and any status GitLab adds later
+  else if (pipeline) chips.push({ label: `Pipeline ${pipeline}`, tone: 'subtle' })
   if (mr.has_conflicts) chips.push({ label: `Conflicts with ${mr.target_branch}`, tone: 'error' })
 
   if (approvals) {

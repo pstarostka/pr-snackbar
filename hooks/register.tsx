@@ -20,6 +20,7 @@ const CHECK = {
   failed: { tone: TONE.error, label: 'failed' },
   running: { tone: TONE.warning, label: 'running' },
   pending: { tone: TONE.subtle, label: 'queued' },
+  manual: { tone: TONE.warning, label: 'manual' },
   skipped: { tone: TONE.subtle, label: 'skipped' },
 } as const
 const REVIEW = {
@@ -57,6 +58,8 @@ const CHECK_ICON: Record<keyof typeof CHECK, string> = {
   failed: '<path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4" fill="none" stroke-width="1.5" stroke-linecap="round"/>',
   running: '<path d="M8 3.5a4.5 4.5 0 0 1 4.5 4.5" fill="none" stroke-width="1.5" stroke-linecap="round"/>',
   pending: '',
+  // a play mark: the job waits for someone to start it
+  manual: '<path d="M6.6 5.4v5.2l4-2.6z" fill="none" stroke-width="1.5" stroke-linejoin="round"/>',
   skipped: '<path d="M5.5 8h5" fill="none" stroke-width="1.5" stroke-linecap="round"/>',
 }
 const checkSvg = (state: keyof typeof CHECK) => {

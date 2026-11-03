@@ -44,6 +44,17 @@ test('a green, approved MR offers merge; conflicts win over everything', () => {
   expect(parseGitlab({ ...mr, state: 'merged' }, null, null)).toBe(null)
 })
 
+test('a GitLab pipeline stopped at a manual job says which job waits', () => {
+  const manual = { ...mr, head_pipeline: { id: 7, status: 'manual' } }
+  const jobs = [{ name: 'build', status: 'success', duration: 42 }, { name: 'deploy:staging', status: 'manual' }]
+  const pr = parseGitlab(manual, null, null, jobs)
+  expect(pr?.chips).toEqual([{ label: 'Pipeline waiting · deploy:staging', tone: 'warning' }])
+  expect(pr?.checks.map(c => c.state)).toEqual(['passed', 'manual'])
+  expect(pr?.action).toBe(null)
+  expect(parseGitlab({ ...mr, head_pipeline: { id: 7, status: 'skipped' } }, null, null)?.chips)
+    .toEqual([{ label: 'Pipeline skipped', tone: 'subtle' }])
+})
+
 const azure = {
   pullRequestId: 4821,
   title: 'Add retry queue',
@@ -109,7 +120,7 @@ test('GitLab panel: every pipeline job with its state; reviewers approved or wai
   expect(pr?.checks).toEqual([
     { name: 'build', state: 'passed' },
     { name: 'test:unit', state: 'failed' },
-    { name: 'deploy', state: 'skipped' },
+    { name: 'deploy', state: 'manual' },
   ])
   expect(pr?.reviewers).toEqual([
     { name: 'Marta W', state: 'approved', isRequired: false },

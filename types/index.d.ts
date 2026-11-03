@@ -2,7 +2,7 @@ export type PrSnackbarHost = 'gitlab' | 'azure'
 export type PrSnackbarTone = 'success' | 'error' | 'warning' | 'subtle'
 export type PrSnackbarChip = { label: string; tone: PrSnackbarTone }
 export type PrSnackbarAction = 'fix' | 'resolve' | 'merge'
-export type PrSnackbarCheck = { name: string; state: 'passed' | 'failed' | 'running' | 'pending' | 'skipped'; duration?: string }
+export type PrSnackbarCheck = { name: string; state: 'passed' | 'failed' | 'running' | 'pending' | 'manual' | 'skipped'; duration?: string }
 export type PrSnackbarReviewer = { name: string; state: 'approved' | 'waiting' | 'changes' | 'rejected'; isRequired: boolean }
 
 export type PrSnackbarPr = {
