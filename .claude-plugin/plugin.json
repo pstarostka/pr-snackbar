@@ -2,5 +2,14 @@
   "name": "pr-snackbar",
   "version": "0.1.1",
   "description": "A pull request status bar above the prompt for GitLab and Azure DevOps, like the built-in GitHub one.",
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "gitlabHosts": {
+      "type": "string",
+      "title": "Extra GitLab hosts",
+      "description": "Self-managed GitLab hostnames that don't contain \"gitlab\", comma-separated (e.g. git.example.com).",
+      "default": "",
+      "required": false
+    }
+  }
 }

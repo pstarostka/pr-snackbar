@@ -57,7 +57,7 @@ Other platforms: see the [glab install guide](https://gitlab.com/gitlab-org/cli#
 glab auth login
 ```
 
-For a self-managed instance, add `--hostname gitlab.example.com`. Use a token with the **`api`** scope if you want the Merge button; **`read_api`** is enough for status only.
+For a self-managed instance, add `--hostname gitlab.example.com`. If its hostname doesn't contain `gitlab`, add it to **Extra GitLab hosts** in `/config` (comma-separated, e.g. `git.example.com`). Use a token with the **`api`** scope if you want the Merge button; **`read_api`** is enough for status only.
 
 Check it works from inside your repository:
 
