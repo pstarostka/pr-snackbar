@@ -139,3 +139,23 @@ test('the primary action presses on the desktop', async ($, on) => {
     PR_LIST[0]!.mergeStatus = 'succeeded'
   }
 })
+
+test('a completed PR stays on the band with a Completed chip and no action button', async ($, on) => {
+  const { clock, ran } = engine($, on)
+  const pr = PR_LIST[0] as (typeof PR_LIST)[0] & { status?: string }
+  pr.status = 'completed'
+  try {
+    await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+    await clock.advance(10)
+    const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    expect(await ui.find({ type: 'Text', text: /^PR 4821 · / })).toBeDefined()
+    const drawn = JSON.stringify(await ui.drawn())
+    expect(drawn).toContain('>Completed</text>')
+    expect(drawn).not.toContain('Approved</text>')
+    expect(await ui.find({ key: 'action' })).toBeUndefined()
+    expect(ran.find(argv => argv.join(' ').includes('pr list'))?.join(' ')).toContain('--status all')
+    await ui.unmount()
+  } finally {
+    delete pr.status
+  }
+})

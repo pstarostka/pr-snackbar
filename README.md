@@ -30,7 +30,7 @@ You ask Claude to push and open a merge request. Then you switch to the browser 
 - **One button for the next step.** Fix a red pipeline, rebase over conflicts or merge, depending on where the MR/PR is.
 - **Details on demand.** The chevron opens every pipeline job or policy, with its time, and every reviewer's vote.
 - **Self-managed GitLab works.** Any host with `gitlab` in its name is recognised; list others in the **Extra GitLab hosts** setting.
-- **Quiet.** Nothing shows outside a GitLab or Azure DevOps repo, or when your branch has no open MR/PR.
+- **Quiet.** Nothing shows outside a GitLab or Azure DevOps repo, or when your branch has no MR/PR.
 
 ## Requirements
 
@@ -156,7 +156,7 @@ git remote get-url origin
 
 | | GitLab | Azure DevOps |
 | --- | --- | --- |
-| Find the MR/PR for this branch | `glab mr view -F json` | `az repos pr list --source-branch <branch> --status active --detect true` |
+| Find the MR/PR for this branch | `glab mr view -F json`, else `glab mr list --source-branch <branch> --all -F json` | `az repos pr list --source-branch <branch> --status all --detect true` (the active PR, else the newest) |
 | Approvals / policies | `glab api projects/:id/merge_requests/<iid>/approvals` | `az repos pr policy list --id <id> --detect true` |
 | Pipeline jobs | `glab api projects/:id/pipelines/<id>/jobs` | (part of the policies) |
 | Lines added / removed | `git diff --shortstat origin/<target>...HEAD` | same |
@@ -171,7 +171,7 @@ GitHub repositories are left alone on purpose: the Claude Code app already has a
 <details>
 <summary><b>The bar doesn't show up</b></summary>
 
-1. The bar only shows for an **open** MR/PR whose source branch is the branch you're on.
+1. The bar only shows for an MR/PR whose source branch is the branch you're on. A merged, completed, abandoned or closed one stays on the bar with a chip saying so and no action button, like the app's GitHub bar.
 2. Run the check command for your host from the repository (`glab mr view` or `az repos pr list --detect true`). If it fails or asks you to sign in, the bar can't read it either.
 3. Check `git remote get-url origin` points at GitLab or Azure DevOps. The bar only looks at the `origin` remote.
 4. For self-managed GitLab: the hostname must contain `gitlab` or be listed in **Extra GitLab hosts**, and `glab` must be signed in to that host.
