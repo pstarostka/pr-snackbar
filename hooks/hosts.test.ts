@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { detectHost, formatDuration, parseAzure, parseGitlab, parseHostList, shortTitle } from './hosts'
+import { detectHost, formatDuration, parseAzure, parseGitlab, parseHostList, pickAzurePr, shortTitle } from './hosts'
 
 test('picks the host from the remote', () => {
   expect(detectHost('git@gitlab.com:acme/api.git')).toBe('gitlab')
@@ -41,7 +41,12 @@ test('a green, approved MR offers merge; conflicts win over everything', () => {
   const ready = { ...mr, detailed_merge_status: 'mergeable', head_pipeline: { id: 7, status: 'success' } }
   expect(parseGitlab(ready, { approvals_left: 0, approved_by: [{}] }, null)?.action).toBe('merge')
   expect(parseGitlab({ ...mr, has_conflicts: true }, null, null)?.action).toBe('resolve')
-  expect(parseGitlab({ ...mr, state: 'merged' }, null, null)).toBe(null)
+  const merged = parseGitlab({ ...mr, state: 'merged', has_conflicts: true }, null, 'test:unit')
+  expect(merged.chips).toEqual([{ label: 'Merged', tone: 'success' }])
+  expect(merged.action).toBe(null)
+  expect(merged.conflicts).toBe(false)
+  expect(parseGitlab({ ...mr, state: 'closed' }, null, null).chips).toEqual([{ label: 'Closed', tone: 'subtle' }])
+  expect(parseGitlab({ ...ready, state: 'locked' }, { approvals_left: 0, approved_by: [{}] }, null).action).toBe('merge')
 })
 
 test('a GitLab pipeline stopped at a manual job says which job waits', () => {
@@ -140,4 +145,25 @@ test('Azure DevOps: an optional build validation is shown under its pipeline nam
   expect(pr.checks).toEqual([{ name: 'Build and test solution', state: 'passed', duration: '2m 27s' }])
   expect(pr.chips[0]).toEqual({ label: 'Policies passed', tone: 'success' })
   expect(formatDuration(18)).toBe('18s')
+})
+
+test('Azure DevOps: a completed or abandoned PR stays, with how it ended and nothing to press', () => {
+  const approved = { ...azure, reviewers: [{ vote: 10, isRequired: true }] }
+  const completed = parseAzure({ ...approved, status: 'completed' }, [build('approved')])
+  expect(completed.chips).toEqual([{ label: 'Completed', tone: 'success' }])
+  expect(completed.action).toBe(null)
+  expect(completed.checks).toEqual([{ name: 'CI', state: 'passed' }])
+  const abandoned = parseAzure({ ...azure, status: 'abandoned' }, [build('rejected')])
+  expect(abandoned.chips).toEqual([{ label: 'Abandoned', tone: 'subtle' }])
+  expect(abandoned.action).toBe(null)
+  expect(abandoned.failedCheck).toBe(null)
+})
+
+test('Azure DevOps: the active PR for the branch wins over a newer completed one', () => {
+  const completed = { ...azure, pullRequestId: 2, status: 'completed' }
+  const active = { ...azure, pullRequestId: 1, status: 'active' }
+  expect(pickAzurePr([completed, active])?.pullRequestId).toBe(1)
+  expect(pickAzurePr([completed, { ...active, status: 'abandoned' }])?.pullRequestId).toBe(2)
+  expect(pickAzurePr([])).toBe(null)
+  expect(pickAzurePr(null)).toBe(null)
 })

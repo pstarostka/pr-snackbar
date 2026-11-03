@@ -62,6 +62,12 @@ const GITLAB_JOB_STATE: Record<string, PrSnackbarCheck['state']> = {
   success: 'passed', failed: 'failed', running: 'running', canceled: 'skipped', skipped: 'skipped', manual: 'manual',
 }
 
+// A merged, completed, abandoned or closed MR/PR stays on the bar, like the app's GitHub bar: one chip saying how it
+// ended, nothing to press. The panel keeps its checks and reviewers.
+export function ended(pr: PrSnackbarPr, chip: PrSnackbarChip): PrSnackbarPr {
+  return { ...pr, chips: [chip], action: null, failedCheck: null, conflicts: false }
+}
+
 const RUNNING = ['created', 'waiting_for_resource', 'preparing', 'pending', 'running', 'scheduled']
 
 export function parseGitlab(
@@ -69,8 +75,7 @@ export function parseGitlab(
   approvals: GitlabApprovals | null,
   failedJob: string | null,
   jobs: GitlabJob[] = [],
-): PrSnackbarPr | null {
-  if (mr.state !== 'opened') return null
+): PrSnackbarPr {
   const chips: PrSnackbarChip[] = []
   const pipeline = mr.head_pipeline?.status
   const failed = pipeline === 'failed'
@@ -102,7 +107,7 @@ export function parseGitlab(
         ? 'merge'
         : null
 
-  return {
+  const pr: PrSnackbarPr = {
     host: 'gitlab',
     id: String(mr.iid),
     ref: `MR !${mr.iid}`,
@@ -123,6 +128,10 @@ export function parseGitlab(
     reviewers: gitlabReviewers(mr, approvals),
     conflicts: !!mr.has_conflicts,
   }
+  if (mr.state === 'merged') return ended(pr, { label: 'Merged', tone: 'success' })
+  // `locked` is GitLab's brief state while a merge runs: still open.
+  if (mr.state === 'closed') return ended(pr, { label: 'Closed', tone: 'subtle' })
+  return pr
 }
 
 function gitlabReviewers(mr: GitlabMr, approvals: GitlabApprovals | null): PrSnackbarReviewer[] {
@@ -145,6 +154,7 @@ function gitlabReviewers(mr: GitlabMr, approvals: GitlabApprovals | null): PrSna
 type AzurePr = {
   pullRequestId: number
   title: string
+  status?: string
   isDraft?: boolean
   mergeStatus?: string
   sourceRefName?: string
@@ -179,6 +189,11 @@ export function azureRepoWebUrl(repository: AzurePr['repository']): string {
   const projectBase = repository.url.slice(0, repository.url.indexOf('/_apis/'))
   const org = projectBase.slice(0, projectBase.lastIndexOf('/'))
   return `${org}/${encodeURIComponent(repository.project.name)}/_git/${encodeURIComponent(repository.name)}`
+}
+
+// `az repos pr list --status all` lists the newest first: the active PR wins, else the newest ended one.
+export function pickAzurePr(list: AzurePr[] | null | undefined): AzurePr | null {
+  return list?.find(pr => pr.status === 'active') ?? list?.[0] ?? null
 }
 
 // Reviewer policies are shown by the reviewers chip, not the policies chip.
@@ -229,7 +244,7 @@ export function parseAzure(pr: AzurePr, policies: AzurePolicy[]): PrSnackbarPr {
         ? 'merge'
         : null
 
-  return {
+  const result: PrSnackbarPr = {
     host: 'azure',
     id: String(pr.pullRequestId),
     ref: `PR ${pr.pullRequestId}`,
@@ -259,6 +274,9 @@ export function parseAzure(pr: AzurePr, policies: AzurePolicy[]): PrSnackbarPr {
     })),
     conflicts,
   }
+  if (pr.status === 'completed') return ended(result, { label: 'Completed', tone: 'success' })
+  if (pr.status === 'abandoned') return ended(result, { label: 'Abandoned', tone: 'subtle' })
+  return result
 }
 
 const AZURE_POLICY_STATE: Record<string, PrSnackbarCheck['state']> = {
