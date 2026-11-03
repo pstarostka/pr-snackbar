@@ -40,7 +40,7 @@ You ask Claude to push and open a merge request. Then you switch to the browser 
 | **Required** | [`git`](https://git-scm.com/) | Finds the remote and the current branch. |
 | **For GitLab** | [GitLab CLI (`glab`)](https://gitlab.com/gitlab-org/cli), signed in | Reads the merge request, pipeline jobs and approvals, and merges. |
 | **For Azure DevOps** | [Azure CLI (`az`)](https://learn.microsoft.com/cli/azure/install-azure-cli) with the [`azure-devops` extension](https://learn.microsoft.com/azure/devops/cli/), signed in | Reads the pull request, branch policies and reviewers, and completes. |
-| Optional | macOS or Linux | The desktop app's ↗ button opens the browser with `open` or `xdg-open`. On other systems, use the link in the terminal. |
+| Platform | macOS, Linux or Windows | Tested on macOS. Linux and Windows are supported but not yet tested. On Windows, the Azure CLI (`az.cmd`) is started through `cmd /c`, and the ↗ button opens the browser with `rundll32`. |
 
 You only need the CLI for the host you use.
 
@@ -188,7 +188,7 @@ The toast shows the CLI's error. Common causes: the token lacks write access (`a
 <details>
 <summary><b>The ↗ button does nothing in the desktop app</b></summary>
 
-It uses `open` (macOS) or `xdg-open` (Linux). On other systems, open the MR/PR from the terminal link or your browser.
+It tries `open` (macOS), `xdg-open` (Linux) and `rundll32 url.dll,FileProtocolHandler` (Windows) in turn. If none works, a toast shows the link to open yourself.
 
 </details>
 

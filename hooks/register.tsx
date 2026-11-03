@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, ProcessRunInit, ProcessRunResult, Register } from 'claude-code'
 
 import type { PrSnackbarPr } from '../types'
 import { detectHost, parseAzure, parseGitlab, shortTitle } from './hosts'
@@ -71,10 +71,12 @@ const checkSvg = (state: keyof typeof CHECK) => {
 const avatarSvg = (initials: string) =>
   svg(24, 24, `<circle cx="12" cy="12" r="12" fill="${TONE.subtle}" fill-opacity="0.22"/><text x="12" y="16" text-anchor="middle" font-family="${FONT}" font-size="10" font-weight="600" fill="${TONE.subtle}">${esc(initials)}</text>`)
 
+// macOS, then freedesktop, then Windows (rundll32 exits 0 on success, unlike explorer)
+const OPENERS = [['open'], ['xdg-open'], ['rundll32', 'url.dll,FileProtocolHandler']]
+
 async function openInBrowser($: EngineInterface, url: string) {
-  // macOS `open`, then the freedesktop opener
-  for (const opener of ['open', 'xdg-open']) {
-    const r = await $.process.run([opener, url], { timeoutMs: 10_000 }).catch(() => null)
+  for (const opener of OPENERS) {
+    const r = await $.process.run([...opener, url], { timeoutMs: 10_000 }).catch(() => null)
     if (r?.exitCode === 0) return
   }
   $.ui.toast(`Could not open ${url}`)
@@ -82,10 +84,22 @@ async function openInBrowser($: EngineInterface, url: string) {
 
 const HOST_NAME = { gitlab: 'GitLab', azure: 'Azure DevOps' } as const
 
+// Windows finds a `.cmd` shim (the Azure CLI is az.cmd) only through cmd.exe, and argv runs without a shell: a command
+// that cannot start is tried once more as `cmd /c <argv>`.
+// ponytail: cmd /c reads & | ^ % in arguments; fine for branch names and ids, quote them if that ever bites.
+async function run($: EngineInterface, argv: string[], init?: ProcessRunInit): Promise<ProcessRunResult> {
+  try {
+    return await $.process.run(argv, init)
+  } catch (error) {
+    return await $.process.run(['cmd', '/c', ...argv], init).catch(() => {
+      throw error
+    })
+  }
+}
 
 async function json($: EngineInterface, argv: string[]): Promise<any> {
   try {
-    const r = await $.process.run(argv, { timeoutMs: 20_000 })
+    const r = await run($, argv, { timeoutMs: 20_000 })
     return r.exitCode === 0 ? JSON.parse(r.stdout) : null
   } catch {
     return null
@@ -93,7 +107,7 @@ async function json($: EngineInterface, argv: string[]): Promise<any> {
 }
 
 async function fetchPr($: EngineInterface): Promise<PrSnackbarPr | null> {
-  const remote = await $.process.run(['git', 'remote', 'get-url', 'origin']).catch(() => null)
+  const remote = await run($, ['git', 'remote', 'get-url', 'origin']).catch(() => null)
   if (!remote || remote.exitCode !== 0) return null
   const host = detectHost(remote.stdout)
 
@@ -109,7 +123,7 @@ async function fetchPr($: EngineInterface): Promise<PrSnackbarPr | null> {
   }
 
   if (host === 'azure') {
-    const branch = await $.process.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).catch(() => null)
+    const branch = await run($, ['git', 'rev-parse', '--abbrev-ref', 'HEAD']).catch(() => null)
     if (!branch || branch.exitCode !== 0) return null
     const list = await json($, [
       'az', 'repos', 'pr', 'list', '--source-branch', branch.stdout.trim(),
@@ -152,7 +166,7 @@ async function merge($: EngineInterface, pr: PrSnackbarPr) {
   const argv = pr.host === 'gitlab'
     ? ['glab', 'mr', 'merge', pr.id, '--yes']
     : ['az', 'repos', 'pr', 'update', '--id', pr.id, '--status', 'completed', '--detect', 'true', '-o', 'none']
-  const r = await $.process.run(argv, { timeoutMs: 60_000 }).catch(() => null)
+  const r = await run($, argv, { timeoutMs: 60_000 }).catch(() => null)
   $.ui.toast(r?.exitCode === 0
     ? `${pr.ref} ${pr.host === 'gitlab' ? 'merged' : 'completed'}`
     : `Could not ${pr.host === 'gitlab' ? 'merge' : 'complete'} ${pr.ref}: ${(r?.stderr ?? 'command failed').trim().slice(0, 200)}`)

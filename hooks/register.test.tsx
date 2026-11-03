@@ -30,12 +30,17 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 100, scroll: { offset: 0, bodyRows: 20 } },
 } as const
 
-function engine($: Parameters<Parameters<typeof test>[1]>[0], on: Parameters<Parameters<typeof test>[1]>[1]) {
+function engine($: Parameters<Parameters<typeof test>[1]>[0], on: Parameters<Parameters<typeof test>[1]>[1], isWindows = false) {
   const opened: string[][] = []
+  const ran: string[][] = []
   const clock = mock.clock(on)
   on('process.run', (_, e) => {
-    const cmd = e.argv.join(' ')
-    if (e.argv[0] === 'open') opened.push([...e.argv])
+    ran.push([...e.argv])
+    // Windows: no open/xdg-open, and az is az.cmd, which starts only through cmd.exe
+    if (isWindows && ['az', 'open', 'xdg-open'].includes(e.argv[0]!)) return { deny: 'cannot start' }
+    const argv = isWindows && e.argv[0] === 'cmd' ? e.argv.slice(2) : e.argv
+    const cmd = argv.join(' ')
+    if (['open', 'rundll32'].includes(e.argv[0]!)) opened.push([...e.argv])
     const stdout = cmd.startsWith('git remote')
       ? 'https://acme@dev.azure.com/acme/payments/_git/webhooks\n'
       : cmd.startsWith('git rev-parse')
@@ -48,8 +53,22 @@ function engine($: Parameters<Parameters<typeof test>[1]>[0], on: Parameters<Par
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  return { clock, opened }
+  return { clock, opened, ran }
 }
+
+test('Windows: the Azure CLI runs through cmd /c, and the open button uses rundll32', async ($, on) => {
+  const { clock, opened, ran } = engine($, on, true)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  await clock.advance(10)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await ui.find({ type: 'Text', text: /^PR 4821 · / })).toBeDefined()
+  expect(ran.some(argv => argv.slice(0, 5).join(' ') === 'cmd /c az repos pr')).toBe(true)
+
+  await ui.press({ key: 'open' })
+  expect(opened).toEqual([['rundll32', 'url.dll,FileProtocolHandler', URL]])
+  await ui.unmount()
+})
 
 test('the band draws on every surface; the title is cut; branches are shown', async ($, on) => {
   const { clock } = engine($, on)
