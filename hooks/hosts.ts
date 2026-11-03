@@ -3,9 +3,17 @@ import type {
   PrSnackbarCheck,
   PrSnackbarReviewer,
   PrSnackbarChip,
+  PrSnackbarDiff,
   PrSnackbarHost,
   PrSnackbarPr,
 } from '../types'
+
+// `git diff --shortstat`: " 3 files changed, 122 insertions(+), 23 deletions(-)", or nothing when there are no changes.
+export function parseShortstat(out: string): PrSnackbarDiff | null {
+  const added = Number(/(\d+) insertion/.exec(out)?.[1] ?? 0)
+  const removed = Number(/(\d+) deletion/.exec(out)?.[1] ?? 0)
+  return added || removed ? { added, removed } : null
+}
 
 // Long titles crowd the chips and buttons off the row.
 export function shortTitle(title: string, max = 48): string {

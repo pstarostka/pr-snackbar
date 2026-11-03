@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { detectHost, formatDuration, parseAzure, parseGitlab, parseHostList, pickAzurePr, shortTitle } from './hosts'
+import { detectHost, formatDuration, parseAzure, parseGitlab, parseHostList, parseShortstat, pickAzurePr, shortTitle } from './hosts'
 
 test('picks the host from the remote', () => {
   expect(detectHost('git@gitlab.com:acme/api.git')).toBe('gitlab')
@@ -166,4 +166,11 @@ test('Azure DevOps: the active PR for the branch wins over a newer completed one
   expect(pickAzurePr([completed, { ...active, status: 'abandoned' }])?.pullRequestId).toBe(2)
   expect(pickAzurePr([])).toBe(null)
   expect(pickAzurePr(null)).toBe(null)
+})
+
+test('git diff --shortstat gives the lines added and removed; no changes give none', () => {
+  expect(parseShortstat(' 5 files changed, 122 insertions(+), 23 deletions(-)\n')).toEqual({ added: 122, removed: 23 })
+  expect(parseShortstat(' 1 file changed, 1 insertion(+)\n')).toEqual({ added: 1, removed: 0 })
+  expect(parseShortstat(' 1 file changed, 4 deletions(-)\n')).toEqual({ added: 0, removed: 4 })
+  expect(parseShortstat('')).toBe(null)
 })

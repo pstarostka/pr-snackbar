@@ -159,6 +159,7 @@ git remote get-url origin
 | Find the MR/PR for this branch | `glab mr view -F json`, else `glab mr list --source-branch <branch> --all -F json` | `az repos pr list --source-branch <branch> --status all --detect true` (the active PR, else the newest) |
 | Approvals / policies | `glab api projects/:id/merge_requests/<iid>/approvals` | `az repos pr policy list --id <id> --detect true` |
 | Pipeline jobs | `glab api projects/:id/pipelines/<id>/jobs` | (part of the policies) |
+| Lines added / removed | `git diff --shortstat origin/<target>...HEAD` | same |
 | Merge / Complete | `glab mr merge <iid> --yes` | `az repos pr update --id <id> --status completed` |
 
 It refreshes **every 60 seconds** and **right after each Claude turn**, because that is usually when Claude pushed. Everything runs locally through your own CLIs. The mod makes no network calls of its own and stores no credentials.
