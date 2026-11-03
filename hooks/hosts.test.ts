@@ -46,6 +46,7 @@ test('a green, approved MR offers merge; conflicts win over everything', () => {
   expect(merged.action).toBe(null)
   expect(merged.conflicts).toBe(false)
   expect(parseGitlab({ ...mr, state: 'closed' }, null, null).chips).toEqual([{ label: 'Closed', tone: 'subtle' }])
+  expect(parseGitlab({ ...ready, state: 'locked' }, { approvals_left: 0, approved_by: [{}] }, null).action).toBe('merge')
 })
 
 test('a GitLab pipeline stopped at a manual job says which job waits', () => {

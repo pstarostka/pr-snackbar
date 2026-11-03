@@ -128,7 +128,9 @@ async function fetchPr($: EngineInterface): Promise<PrSnackbarPr | null> {
     if (!mr) {
       const branch = await currentBranch($)
       if (!branch) return null
-      mr = (await json($, ['glab', 'mr', 'list', '--source-branch', branch, '--all', '-F', 'json']))?.[0]
+      const listed = (await json($, ['glab', 'mr', 'list', '--source-branch', branch, '--all', '-F', 'json']))?.[0]
+      // The list leaves out head_pipeline; viewing by number returns the full MR in any state.
+      mr = listed && ((await json($, ['glab', 'mr', 'view', String(listed.iid), '-F', 'json'])) ?? listed)
     }
     if (!mr) return null
     const approvals = await json($, ['glab', 'api', `projects/:id/merge_requests/${mr.iid}/approvals`])

@@ -129,7 +129,8 @@ export function parseGitlab(
     conflicts: !!mr.has_conflicts,
   }
   if (mr.state === 'merged') return ended(pr, { label: 'Merged', tone: 'success' })
-  if (mr.state !== 'opened') return ended(pr, { label: 'Closed', tone: 'subtle' })
+  // `locked` is GitLab's brief state while a merge runs: still open.
+  if (mr.state === 'closed') return ended(pr, { label: 'Closed', tone: 'subtle' })
   return pr
 }
 
