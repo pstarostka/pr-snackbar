@@ -14,14 +14,20 @@ export function shortTitle(title: string, max = 48): string {
 
 // Picks the host from `git remote get-url origin`. GitHub is left to the
 // app's built-in bar.
-// ponytail: any hostname containing "gitlab" counts as GitLab; add a host list setting if a self-managed one is named otherwise.
-export function detectHost(remote: string): PrSnackbarHost | null {
+// Any hostname containing "gitlab" counts as GitLab. A self-managed instance
+// named otherwise can be listed in the plugin's `gitlabHosts` setting.
+// The `gitlabHosts` setting: "a.example.com, b.example.com".
+export function parseHostList(value: unknown): string[] {
+  return typeof value === 'string' ? value.split(',').map(h => h.trim().toLowerCase()).filter(Boolean) : []
+}
+
+export function detectHost(remote: string, extraGitlabHosts: readonly string[] = []): PrSnackbarHost | null {
   const url = remote.trim()
   const host = (url.match(/^[a-z+]+:\/\/(?:[^@/]+@)?([^/:]+)/i) ??
     url.match(/^[^@/]+@([^:]+):/))?.[1]?.toLowerCase()
   if (!host) return null
   if (host === 'dev.azure.com' || host === 'ssh.dev.azure.com' || host.endsWith('.visualstudio.com')) return 'azure'
-  if (host.includes('gitlab')) return 'gitlab'
+  if (host.includes('gitlab') || extraGitlabHosts.includes(host)) return 'gitlab'
   return null
 }
 

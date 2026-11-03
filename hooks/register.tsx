@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, ProcessRunInit, ProcessRunResult, Register } from 'claude-code'
 
 import type { PrSnackbarPr } from '../types'
-import { detectHost, parseAzure, parseGitlab, shortTitle } from './hosts'
+import { detectHost, parseAzure, parseGitlab, parseHostList, shortTitle } from './hosts'
 
 const prAtom = atom({ plugin: 'pr-snackbar', key: 'pr' } as const, null)
 const expandedAtom = atom({ plugin: 'pr-snackbar', key: 'expanded' } as const, false)
@@ -106,10 +106,13 @@ async function json($: EngineInterface, argv: string[]): Promise<any> {
   }
 }
 
+// Set from the `gitlabHosts` setting each time the module loads.
+let gitlabHosts: string[] = []
+
 async function fetchPr($: EngineInterface): Promise<PrSnackbarPr | null> {
   const remote = await run($, ['git', 'remote', 'get-url', 'origin']).catch(() => null)
   if (!remote || remote.exitCode !== 0) return null
-  const host = detectHost(remote.stdout)
+  const host = detectHost(remote.stdout, gitlabHosts)
 
   if (host === 'gitlab') {
     const mr = await json($, ['glab', 'mr', 'view', '-F', 'json'])
@@ -173,7 +176,9 @@ async function merge($: EngineInterface, pr: PrSnackbarPr) {
   await refresh($)
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
+  gitlabHosts = parseHostList(options.gitlabHosts)
+
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     $.clock.after(1, () => void refresh($))

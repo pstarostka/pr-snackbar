@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { detectHost, formatDuration, parseAzure, parseGitlab, shortTitle } from './hosts'
+import { detectHost, formatDuration, parseAzure, parseGitlab, parseHostList, shortTitle } from './hosts'
 
 test('picks the host from the remote', () => {
   expect(detectHost('git@gitlab.com:acme/api.git')).toBe('gitlab')
@@ -10,6 +10,10 @@ test('picks the host from the remote', () => {
   expect(detectHost('https://acme.visualstudio.com/payments/_git/webhooks')).toBe('azure')
   expect(detectHost('git@github.com:acme/api.git')).toBe(null)
   expect(detectHost('')).toBe(null)
+  expect(detectHost('git@git.example.net:acme/api.git')).toBe(null)
+  expect(detectHost('git@git.example.net:acme/api.git', parseHostList('other.test, Git.Example.net'))).toBe('gitlab')
+  expect(parseHostList('')).toEqual([])
+  expect(parseHostList(undefined)).toEqual([])
 })
 
 const mr = {
