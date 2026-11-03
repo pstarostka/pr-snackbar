@@ -19,10 +19,9 @@ The bar the Claude Code app shows for GitHub PRs, for the code hosts it doesn't 
 
 You ask Claude to push and open a merge request. Then you switch to the browser to see whether the pipeline passed, who still has to approve, and whether `main` moved on. **pr-snackbar keeps all of that above your prompt**, and when something breaks it hands the fix straight back to Claude.
 
-```
- GL  MR !142 · Add retry queue for webhook delivery      ● Pipeline failed · test:unit   ● 1 of 2 approvals   ∨   [ Fix with Claude ]  ↗
-     feature/webhook-retry → main · GitLab
-```
+<p align="center">
+  <img src="docs/screenshot.png" alt="pr-snackbar above the prompt in the Claude Code desktop app: an Azure DevOps pull request with Draft, Policies passed and No approvals yet chips" width="830">
+</p>
 
 ## Highlights
 
