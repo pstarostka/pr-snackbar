@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, ProcessRunInit, ProcessRunResult, Register } from 'claude-code'
 
 import type { PrSnackbarPr } from '../types'
-import { detectHost, parseAzure, parseGitlab, parseHostList, shortTitle } from './hosts'
+import { detectHost, parseAzure, parseGitlab, parseHostList, pickAzurePr, shortTitle } from './hosts'
 
 const prAtom = atom({ plugin: 'pr-snackbar', key: 'pr' } as const, null)
 const expandedAtom = atom({ plugin: 'pr-snackbar', key: 'expanded' } as const, false)
@@ -112,14 +112,25 @@ async function json($: EngineInterface, argv: string[]): Promise<any> {
 // Set from the `gitlabHosts` setting each time the module loads.
 let gitlabHosts: string[] = []
 
+async function currentBranch($: EngineInterface): Promise<string | null> {
+  const r = await run($, ['git', 'rev-parse', '--abbrev-ref', 'HEAD']).catch(() => null)
+  return r?.exitCode === 0 ? r.stdout.trim() || null : null
+}
+
 async function fetchPr($: EngineInterface): Promise<PrSnackbarPr | null> {
   const remote = await run($, ['git', 'remote', 'get-url', 'origin']).catch(() => null)
   if (!remote || remote.exitCode !== 0) return null
   const host = detectHost(remote.stdout, gitlabHosts)
 
   if (host === 'gitlab') {
-    const mr = await json($, ['glab', 'mr', 'view', '-F', 'json'])
-    if (!mr || mr.state !== 'opened') return null
+    // `glab mr view` finds only an open MR; a merged or closed one is found by its source branch.
+    let mr = await json($, ['glab', 'mr', 'view', '-F', 'json'])
+    if (!mr) {
+      const branch = await currentBranch($)
+      if (!branch) return null
+      mr = (await json($, ['glab', 'mr', 'list', '--source-branch', branch, '--all', '-F', 'json']))?.[0]
+    }
+    if (!mr) return null
     const approvals = await json($, ['glab', 'api', `projects/:id/merge_requests/${mr.iid}/approvals`])
     const jobs = mr.head_pipeline
       ? ((await json($, ['glab', 'api', `projects/:id/pipelines/${mr.head_pipeline.id}/jobs`])) ?? [])
@@ -129,13 +140,14 @@ async function fetchPr($: EngineInterface): Promise<PrSnackbarPr | null> {
   }
 
   if (host === 'azure') {
-    const branch = await run($, ['git', 'rev-parse', '--abbrev-ref', 'HEAD']).catch(() => null)
-    if (!branch || branch.exitCode !== 0) return null
+    const branch = await currentBranch($)
+    if (!branch) return null
+    // `--status all`: a completed or abandoned PR stays on the bar
     const list = await json($, [
-      'az', 'repos', 'pr', 'list', '--source-branch', branch.stdout.trim(),
-      '--status', 'active', '--detect', 'true', '-o', 'json',
+      'az', 'repos', 'pr', 'list', '--source-branch', branch,
+      '--status', 'all', '--detect', 'true', '-o', 'json',
     ])
-    const pr = list?.[0]
+    const pr = pickAzurePr(list)
     if (!pr) return null
     const policies = await json($, [
       'az', 'repos', 'pr', 'policy', 'list', '--id', String(pr.pullRequestId), '--detect', 'true', '-o', 'json',
