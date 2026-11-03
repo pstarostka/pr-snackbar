@@ -29,7 +29,7 @@ You ask Claude to push and open a merge request. Then you switch to the browser 
 - **Speaks each host's language.** Pipelines and approval rules on GitLab, branch policies and required reviewers on Azure DevOps, *Merge* vs *Complete*.
 - **One button for the next step.** Fix a red pipeline, rebase over conflicts or merge, depending on where the MR/PR is.
 - **Details on demand.** The chevron opens every pipeline job or policy, with its time, and every reviewer's vote.
-- **Self-managed GitLab works.** Any host with `gitlab` in its name is recognised.
+- **Self-managed GitLab works.** Any host with `gitlab` in its name is recognised; list others in the **Extra GitLab hosts** setting.
 - **Quiet.** Nothing shows outside a GitLab or Azure DevOps repo, or when your branch has no open MR/PR.
 
 ## Requirements
@@ -57,7 +57,13 @@ Other platforms: see the [glab install guide](https://gitlab.com/gitlab-org/cli#
 glab auth login
 ```
 
-For a self-managed instance, add `--hostname gitlab.example.com`. If its hostname doesn't contain `gitlab`, add it to **Extra GitLab hosts** in `/config` (comma-separated, e.g. `git.example.com`). Use a token with the **`api`** scope if you want the Merge button; **`read_api`** is enough for status only.
+For a self-managed instance, add `--hostname gitlab.example.com`. If its hostname doesn't contain `gitlab`, add it to the **Extra GitLab hosts** setting (comma-separated, e.g. `git.example.com`). In a terminal session it's in `/config`, and a terminal install asks for it. The desktop app has no `/config`, so set it from a shell instead (it applies to the app too):
+
+```bash
+echo '{"gitlabHosts": "git.example.com"}' | claude plugin configure pr-snackbar@pr-snackbar --values-stdin
+```
+
+Use a token with the **`api`** scope if you want the Merge button; **`read_api`** is enough for status only.
 
 Check it works from inside your repository:
 
@@ -144,7 +150,7 @@ Click the chevron to open it:
 git remote get-url origin
         │
         ├─ dev.azure.com · ssh.dev.azure.com · *.visualstudio.com ──▶ Azure DevOps
-        ├─ any host containing "gitlab" ────────────────────────────▶ GitLab
+        ├─ any host containing "gitlab", or in Extra GitLab hosts ──▶ GitLab
         └─ anything else (GitHub included) ─────────────────────────▶ no bar
 ```
 
@@ -167,7 +173,7 @@ GitHub repositories are left alone on purpose: the Claude Code app already has a
 1. The bar only shows for an **open** MR/PR whose source branch is the branch you're on.
 2. Run the check command for your host from the repository (`glab mr view` or `az repos pr list --detect true`). If it fails or asks you to sign in, the bar can't read it either.
 3. Check `git remote get-url origin` points at GitLab or Azure DevOps. The bar only looks at the `origin` remote.
-4. For self-managed GitLab: the hostname must contain `gitlab`, and `glab` must be signed in to that host.
+4. For self-managed GitLab: the hostname must contain `gitlab` or be listed in **Extra GitLab hosts**, and `glab` must be signed in to that host.
 
 </details>
 

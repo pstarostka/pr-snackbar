@@ -16,9 +16,14 @@ export function shortTitle(title: string, max = 48): string {
 // app's built-in bar.
 // Any hostname containing "gitlab" counts as GitLab. A self-managed instance
 // named otherwise can be listed in the plugin's `gitlabHosts` setting.
-// The `gitlabHosts` setting: "a.example.com, b.example.com".
+
+// The `gitlabHosts` setting: "a.example.com, b.example.com". A pasted URL
+// ("https://git.example.com:8443/group") counts as its hostname.
 export function parseHostList(value: unknown): string[] {
-  return typeof value === 'string' ? value.split(',').map(h => h.trim().toLowerCase()).filter(Boolean) : []
+  if (typeof value !== 'string') return []
+  return value.split(',')
+    .map(h => h.trim().toLowerCase().replace(/^[a-z+]+:\/\//, '').replace(/^[^@/]+@/, '').replace(/[/:].*$/, ''))
+    .filter(Boolean)
 }
 
 export function detectHost(remote: string, extraGitlabHosts: readonly string[] = []): PrSnackbarHost | null {

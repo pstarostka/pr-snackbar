@@ -14,6 +14,7 @@ test('picks the host from the remote', () => {
   expect(detectHost('git@git.example.net:acme/api.git', parseHostList('other.test, Git.Example.net'))).toBe('gitlab')
   expect(parseHostList('')).toEqual([])
   expect(parseHostList(undefined)).toEqual([])
+  expect(parseHostList(' https://git.example.net:8443/acme , ssh://git@code.example.org ')).toEqual(['git.example.net', 'code.example.org'])
 })
 
 const mr = {
