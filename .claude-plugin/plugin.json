@@ -1,0 +1,6 @@
+{
+  "name": "pr-snackbar",
+  "version": "0.1.0",
+  "description": "A pull request status bar above the prompt for GitLab and Azure DevOps, like the built-in GitHub one.",
+  "types": "./types/index.d.ts"
+}
